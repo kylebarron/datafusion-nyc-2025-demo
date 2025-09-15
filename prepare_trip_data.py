@@ -1,9 +1,27 @@
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from arro3.core import ChunkedArray, Table
 from geoarrow.rust.core import points
 
-table = Table.from_arrow(pq.read_table("yellow_tripdata_2010-01.parquet"))
+pa_table = pq.read_table("yellow_tripdata_2010-01.parquet")
+
+# Remove rows with start or end at null island (0, 0)
+filtered = pa_table.filter(
+    pc.and_(
+        pc.and_(
+            pc.and_(
+                pc.less(pa_table["pickup_longitude"], 0),
+                pc.less(pa_table["dropoff_longitude"], 0),
+            ),
+            pc.greater(pa_table["pickup_latitude"], 0),
+        ),
+        pc.greater(pa_table["dropoff_latitude"], 0),
+    )
+)
+
+table = Table.from_arrow(filtered)
+
 
 pickup_chunks = []
 dropoff_chunks = []

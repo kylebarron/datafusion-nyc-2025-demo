@@ -11,6 +11,8 @@ dependencies = [
     "jupyterlab>=4.4.7",
     "lonboard>=0.12.0",
     "marimo>=0.15.4",
+    "matplotlib>=3.10.6",
+    "palettable>=3.3.3",
     "pyarrow>=21.0.0",
 ]
 

@@ -23,3 +23,9 @@ This step is required for now so that we can assign GeoArrow metadata onto the P
 ```bash
 uv run prepare_trip_data.py
 ```
+
+### Run Demo
+
+```bash
+uv run marimo edit marimo_example.py
+```

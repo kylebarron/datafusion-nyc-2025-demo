@@ -5,11 +5,23 @@ app = marimo.App(width="medium")
 
 
 @app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ## `GeoDataFusion` Example
+
+    This is a basic example to use the [DataFusion Python API](https://datafusion.apache.org/python/) with the [GeoDataFusion extension](https://github.com/datafusion-contrib/datafusion-geo) to work with and visualize GeoParquet data.
+
+    This example uses data from the [NYC Taxi & Limousine Commission (TLC) Trip Records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+    """
+    )
+    return
+
+
+@app.cell
 def _():
     import marimo as mo
-    import numpy as np
     import pyarrow as pa
-    from arro3.core import Table
     from datafusion import SessionContext
     from geodatafusion import register_all
     from lonboard import Map, ScatterplotLayer, viz
@@ -28,23 +40,32 @@ def _():
 
 
 @app.cell
-def _(SessionContext, register_all):
-    def create_context():
-        ctx = SessionContext()
-        register_all(ctx)
-        ctx.register_parquet(
-            "trips",
-            "yellow_tripdata_2010-01_geo.parquet",
-            skip_metadata=False,
-        )
-        return ctx
+def _(mo):
+    mo.md(r"""Now we'll create the DataFusion `SessionContext`, its primary API endpoint, and register our spatial extension onto it.""")
+    return
 
-    ctx = create_context()
+
+@app.cell
+def _(SessionContext, register_all):
+    ctx = SessionContext()
+    register_all(ctx)
+    ctx.register_parquet(
+        "trips",
+        "yellow_tripdata_2010-01_geo.parquet",
+        skip_metadata=False,
+    )
     return (ctx,)
 
 
 @app.cell
-def _():
+def _(mo):
+    mo.md(
+        r"""
+    Next we'll initialize a bounding box to be used in a spatial intersection query in DataFusion. 
+
+    This bounding box will be overridden by drawing on the map instance.
+    """
+    )
     return
 
 
@@ -55,10 +76,16 @@ def _(mo):
 
 
 @app.cell
+def _(mo):
+    mo.md(r"""Next we define our SQL query, interpolating the bounding box (sorry for the SQL injection!)""")
+    return
+
+
+@app.cell
 def _(get_bbox):
     bbox = get_bbox()
-    sql2 = """
-        SELECT pickup, total_amount, trip_distance
+    sql = """
+        SELECT *
         FROM trips
         WHERE ST_Intersects(pickup, ST_MakeBox2D(
                 ST_Point({minx}, {miny}),
@@ -66,12 +93,12 @@ def _(get_bbox):
             ))
         LIMIT 100000
         """.format(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
-    return (sql2,)
+    return (sql,)
 
 
 @app.cell
-def _(ctx, sql2):
-    df = ctx.sql(sql2)
+def _(ctx, sql):
+    df = ctx.sql(sql)
     df
     return (df,)
 
@@ -81,8 +108,7 @@ def _(BrBG_10, apply_continuous_cmap, df, pa):
     table = pa.table(df)
     min_bound = 5
     max_bound = 50
-    total_amount = table["total_amount"].to_numpy()
-    normalized_total_amount = (total_amount - min_bound) / (max_bound - min_bound)
+    normalized_total_amount = (table["total_amount"].to_numpy() - min_bound) / (max_bound - min_bound)
     fill_color = apply_continuous_cmap(
         normalized_total_amount,
         BrBG_10,
@@ -94,10 +120,10 @@ def _(BrBG_10, apply_continuous_cmap, df, pa):
 @app.cell
 def _(ScatterplotLayer, fill_color, normalized_total_amount, table):
     layer = ScatterplotLayer(
-        table=table,
+        table=table.select(["pickup", "total_amount", "trip_distance"]),
         get_fill_color=fill_color,
         get_radius=normalized_total_amount * 90,
-        radius_units = "meters",
+        radius_units="meters",
         radius_min_pixels=0.1
     )
     return (layer,)
@@ -113,17 +139,6 @@ def _(Map, layer, set_bbox):
     m.observe(on_bbox_change, names="selected_bounds")
 
     m
-    return
-
-
-@app.cell
-def _(get_bbox):
-    print(get_bbox())
-    return
-
-
-@app.cell
-def _():
     return
 
 
